@@ -47,6 +47,18 @@
             transition: all 0.2s;
         }
         .btn-primary:hover { transform: scale(1.02); }
+        
+        .btn-danger {
+            background-color: #fee2e2;
+            color: #991b1b;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            border: 1px solid #fecaca;
+        }
+        .btn-danger:hover { background-color: #fecaca; }
+
         .btn-secondary {
             background-color: #e5e7eb;
             color: #374151;
@@ -219,14 +231,38 @@
                                 </button>
                             </div>
                         </div>
+                        
+                        <!-- PART 4: Email for Report (Moved here) -->
+                        <div>
+                            <div class="section-header border-l-green-500 bg-green-50">
+                                <span class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center mr-2 text-sm">4</span>
+                                อีเมลรับผล (Email Report)
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 font-bold">ระบุอีเมล (ถ้าต้องการรับ PDF)</label>
+                                <div class="relative w-full">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fa-solid fa-envelope text-gray-400"></i>
+                                    </div>
+                                    <input type="email" id="userEmail" class="input-field pl-10" placeholder="example@hospital.com">
+                                </div>
+                                <p class="text-[10px] text-gray-400 mt-1">*ระบบจะส่ง PDF ให้เฉพาะเมื่อกรอกอีเมล</p>
+                            </div>
+                        </div>
 
-                        <div class="pt-4 flex gap-3">
-                            <button type="button" onclick="calculate()" class="btn-primary w-full shadow-lg transform active:scale-95">
-                                <i class="fa-solid fa-calculator mr-2"></i>วิเคราะห์ผล (Calculate)
+                        <!-- Buttons -->
+                        <div class="pt-4 grid grid-cols-2 gap-3">
+                            <button type="button" id="calcBtn" onclick="calculateAndSave()" class="btn-primary col-span-1 shadow-lg transform active:scale-95 flex justify-center items-center">
+                                <i class="fa-solid fa-calculator mr-2"></i>วิเคราะห์ & บันทึก
                             </button>
-                            <button type="button" onclick="resetForm()" class="px-4 py-2 bg-gray-200 rounded-lg text-gray-600 hover:bg-gray-300">
-                                <i class="fa-solid fa-rotate-right"></i>
+                            <button type="button" onclick="resetForm()" class="btn-danger col-span-1 flex justify-center items-center">
+                                <i class="fa-solid fa-trash-can mr-2"></i> ล้างข้อมูล (Clear)
                             </button>
+                        </div>
+                        
+                        <div class="text-center">
+                            <span id="userIdDisplay" class="text-[10px] text-gray-400 bg-gray-100 px-2 py-1 rounded">Machine ID: ...</span>
+                            <div id="saveStatus" class="text-center text-xs mt-2 h-4"></div>
                         </div>
                     </form>
                 </div>
@@ -315,27 +351,6 @@
                     <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                         <h4 class="font-bold text-yellow-800 mb-2"><i class="fa-solid fa-lightbulb mr-2"></i>สรุปและคำแนะนำ</h4>
                         <p id="recommendationText" class="text-sm text-gray-800 leading-relaxed"></p>
-                    </div>
-
-                    <!-- Save & Email Action -->
-                    <div class="mt-6 border-t pt-4 bg-gray-50 p-4 rounded-lg">
-                        <label class="block text-sm font-bold text-gray-700 mb-1">อีเมลสำหรับรับผล (Email)</label>
-                        <div class="flex gap-2 mb-2">
-                            <div class="relative w-full">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fa-solid fa-envelope text-gray-400"></i>
-                                </div>
-                                <input type="email" id="userEmail" class="input-field pl-10" placeholder="example@hospital.com">
-                            </div>
-                        </div>
-                        
-                         <button onclick="saveAndSendEmail()" id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex justify-center items-center">
-                            <i class="fa-solid fa-file-pdf mr-2"></i> บันทึกและส่ง PDF ทางเมล
-                        </button>
-                        <div class="text-center mt-2">
-                            <span id="userIdDisplay" class="text-[10px] text-gray-400 bg-gray-100 px-2 py-1 rounded">Machine ID: Loading...</span>
-                            <p id="saveStatus" class="text-center text-xs mt-1 text-gray-500"></p>
-                        </div>
                     </div>
                 </div>
 
@@ -495,7 +510,6 @@ function doPost(e) {
     function getUserId() {
         let userId = localStorage.getItem('vanco_userid');
         if (!userId) {
-            // Generate simple UUID-like string
             userId = 'user_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
             localStorage.setItem('vanco_userid', userId);
         }
@@ -504,7 +518,6 @@ function doPost(e) {
 
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('userIdDisplay').innerText = "Machine ID: " + getUserId();
-        // ... (Google script setup)
         const savedUrl = localStorage.getItem('googleScriptUrl');
         if(savedUrl) document.getElementById('scriptUrl').value = savedUrl;
 
@@ -550,30 +563,30 @@ function doPost(e) {
         container.appendChild(row);
     }
 
-    // --- Calculation Logic ---
+    // --- Main Calculation & Save Logic ---
     let myChart = null; 
 
-    function calculate() {
-        // 1. Get Patient Data
+    function calculateAndSave() {
+        // 1. Get Inputs
         const age = parseFloat(document.getElementById('age').value);
         const gender = document.getElementById('gender').value;
         const weight = parseFloat(document.getElementById('weight').value);
         const scr = parseFloat(document.getElementById('scr').value);
-
-        if(!age || !weight || !scr) { alert("กรุณากรอกข้อมูลผู้ป่วยให้ครบ"); return; }
-
-        // 2. Dosing Data
-        const hasLoading = document.querySelector('input[name="loadingOption"]:checked').value === 'yes';
-        const loadingDose = hasLoading ? parseFloat(document.getElementById('loadingDose').value || 0) : 0;
         const mdDose = parseFloat(document.getElementById('mdDose').value || 0);
         const interval = parseFloat(document.getElementById('interval').value || 0);
+
+        // Validation
+        if(!age || !weight || !scr) { alert("กรุณากรอกข้อมูลผู้ป่วยให้ครบ"); return; }
+        if(!mdDose || !interval) { alert("กรุณากรอกข้อมูล Maintenance Dose"); return; }
+
+        // --- Core PK Calculation ---
         const t_inf = parseFloat(document.getElementById('infusionTime').value || 1);
+        const hasLoading = document.querySelector('input[name="loadingOption"]:checked').value === 'yes';
+        const loadingDose = hasLoading ? parseFloat(document.getElementById('loadingDose').value || 0) : 0;
         const doseCount = parseInt(document.getElementById('doseCount').value || 1);
         const firstMDTimeStr = document.getElementById('firstMDTime').value;
 
-        if(!mdDose || !interval) { alert("กรุณากรอกข้อมูล Maintenance Dose"); return; }
-
-        // 3. Level Data
+        // Level Data
         const hasLevel = document.querySelector('input[name="levelOption"]:checked').value === 'yes';
         let measuredLevels = [];
         if(hasLevel) {
@@ -583,30 +596,24 @@ function doPost(e) {
                 const c = parseFloat(r.querySelector('.level-conc').value);
                 if(t && !isNaN(c)) measuredLevels.push({ time: new Date(t), conc: c });
             });
-            // Sort by time
             measuredLevels.sort((a, b) => a.time - b.time);
         }
 
-        // --- Core PK ---
+        // Calcs
         let crcl = ((140 - age) * weight) / (72 * scr);
         if (gender === 'female') crcl *= 0.85;
-        
         let ke_pop = (0.00083 * crcl) + 0.0044;
         let vd_pop = 0.7 * weight; 
         
-        // --- Adjustment Logic (Simplified to use Last Level) ---
         let final_ke = ke_pop;
         let final_vd = vd_pop;
         let final_cl = final_ke * final_vd;
         let method = "Population PK";
 
-        // Logic: If levels exist, use the LATEST one to adjust Clearance (Cl)
-        // Assumption: Vd is population, Cl varies.
+        // Adjustment
         if (measuredLevels.length > 0 && firstMDTimeStr) {
             const lastLevel = measuredLevels[measuredLevels.length - 1];
             const startTime = new Date(firstMDTimeStr);
-            
-            // Calculate predicted conc at this time using Superposition of previous doses
             const predConc = simulateConcentration(startTime, lastLevel.time, loadingDose, mdDose, interval, t_inf, ke_pop, vd_pop);
             
             if (predConc > 0) {
@@ -617,17 +624,15 @@ function doPost(e) {
             }
         }
 
-        // --- Outputs ---
+        // Results
         const dailyDose = mdDose * (24 / interval);
         const auc24 = dailyDose / final_cl;
-
-        // Steady State Peak/Trough (Formula)
         const ss_num = (mdDose / t_inf) * (1 - Math.exp(-final_ke * t_inf));
         const ss_den = final_vd * final_ke * (1 - Math.exp(-final_ke * interval));
         const true_peak = ss_num / ss_den;
         const true_trough = true_peak * Math.exp(-final_ke * (interval - t_inf));
 
-        // Display
+        // --- Update UI ---
         document.getElementById('patientSummary').innerText = `เพศ: ${gender}, อายุ: ${age}, CrCl: ${crcl.toFixed(1)}`;
         document.getElementById('calcMethodBadge').innerText = method;
         document.getElementById('calcMethodBadge').className = method.includes("Adjusted") ? "inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800" : "inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800";
@@ -636,12 +641,10 @@ function doPost(e) {
         document.getElementById('resVd').innerText = final_vd.toFixed(1) + " L";
         document.getElementById('resKe').innerText = final_ke.toFixed(4) + "/hr";
         document.getElementById('resHalfLife').innerText = (0.693/final_ke).toFixed(1) + " hr";
-
         document.getElementById('resAUC').innerText = auc24.toFixed(0);
         document.getElementById('resTruePeak').innerText = true_peak.toFixed(1);
         document.getElementById('resTrueTrough').innerText = true_trough.toFixed(1);
 
-        // Styling AUC Bar
         const aucElem = document.getElementById('aucBar');
         let aucPercent = (auc24 / 800) * 100;
         if(aucPercent > 100) aucPercent = 100;
@@ -650,7 +653,6 @@ function doPost(e) {
         else if(auc24 > 600) aucElem.className = "h-2.5 rounded-full bg-red-500";
         else aucElem.className = "h-2.5 rounded-full bg-green-500";
 
-        // Recommendation
         let rec = "";
         if (auc24 < 400) rec += "AUC ต่ำ (<400). ";
         else if (auc24 > 600) rec += "AUC สูง (>600). ";
@@ -658,52 +660,54 @@ function doPost(e) {
         if(true_trough > 20) rec += "ระวัง Trough > 20.";
         document.getElementById('recommendationText').innerText = rec;
 
-        // Chart
         renderChart(loadingDose, mdDose, interval, t_inf, final_ke, final_vd, measuredLevels, firstMDTimeStr);
 
-        // Show Result
         const resSec = document.getElementById('resultSection');
         resSec.classList.remove('hidden');
         setTimeout(() => resSec.classList.remove('opacity-0'), 50);
+
+        // --- Trigger Save Function ---
+        sendDataToSheet();
     }
 
-    // --- Superposition Logic ---
+    function resetForm() {
+        if(confirm("คุณต้องการล้างข้อมูลทั้งหมดใช่หรือไม่?")) {
+            document.getElementById('calcForm').reset();
+            document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('levelContainer').innerHTML = '';
+            addLevelRow(); // Add back one default row
+            toggleLoading(false);
+            toggleLevelSection(false);
+            document.getElementById('saveStatus').innerText = "";
+        }
+    }
+
+    // --- Helper Math ---
     function simulateConcentration(startTime, targetTime, ld, md, interval, t_inf, ke, vd) {
-        // Calculate doses administered before targetTime
         let totalConc = 0;
         const diffHours = (targetTime - startTime) / (1000 * 3600);
         if (diffHours < 0) return 0;
-
-        // LD component
-        if (ld > 0) {
-            totalConc += calcSingleDoseConc(ld, diffHours, t_inf, ke, vd);
-        }
-
-        // MD components
-        let t = 0; // Time of dose relative to start
+        if (ld > 0) totalConc += calcSingleDoseConc(ld, diffHours, t_inf, ke, vd);
+        let t = 0; 
         let doseCount = 0;
         while (t < diffHours) {
             totalConc += calcSingleDoseConc(md, diffHours - t, t_inf, ke, vd);
             t += interval;
             doseCount++;
-            if(doseCount > 50) break; // Safety break
+            if(doseCount > 50) break; 
         }
         return totalConc;
     }
 
     function calcSingleDoseConc(dose, timeSinceDose, t_inf, ke, vd) {
         if (timeSinceDose < 0) return 0;
-        if (timeSinceDose <= t_inf) {
-            // During infusion
-            return (dose / (t_inf * vd * ke)) * (1 - Math.exp(-ke * timeSinceDose));
-        } else {
-            // Elimination
+        if (timeSinceDose <= t_inf) return (dose / (t_inf * vd * ke)) * (1 - Math.exp(-ke * timeSinceDose));
+        else {
             const peak = (dose / (t_inf * vd * ke)) * (1 - Math.exp(-ke * t_inf));
             return peak * Math.exp(-ke * (timeSinceDose - t_inf));
         }
     }
 
-    // --- Charting ---
     function renderChart(ld, md, interval, t_inf, ke, vd, levels, startStr) {
         const ctx = document.getElementById('pkChart').getContext('2d');
         const dataPoints = [];
@@ -736,46 +740,31 @@ function doPost(e) {
                 const diffH = (l.time - start) / (3600000);
                 return { x: diffH, y: l.conc };
             }).filter(p => p.x >= 0 && p.x <= simHours);
-
             if(levelPoints.length > 0) {
-                datasets.push({
-                    label: 'Measured Levels',
-                    data: levelPoints,
-                    backgroundColor: 'red',
-                    borderColor: 'red',
-                    pointRadius: 6,
-                    type: 'scatter',
-                    showLine: false
-                });
+                datasets.push({ label: 'Measured Levels', data: levelPoints, backgroundColor: 'red', borderColor: 'red', pointRadius: 6, type: 'scatter', showLine: false });
             }
         }
-
         if (myChart) myChart.destroy();
-        myChart = new Chart(ctx, {
-            type: 'line',
-            data: { datasets: datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { type: 'linear', title: {display:true, text: 'Hours from Start'}, max: simHours },
-                    y: { beginAtZero: true, title: {display:true, text: 'Conc (mcg/mL)'} }
-                }
-            }
-        });
+        myChart = new Chart(ctx, { type: 'line', data: { datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'linear', title: {display:true, text: 'Hours from Start'}, max: simHours }, y: { beginAtZero: true, title: {display:true, text: 'Conc (mcg/mL)'} } } } });
     }
 
-    async function saveAndSendEmail() {
+    // --- Save Data Async ---
+    async function sendDataToSheet() {
         const url = localStorage.getItem('googleScriptUrl');
-        if(!url) { alert("กรุณาตั้งค่า Web App URL ก่อน"); document.getElementById('setupModal').classList.remove('hidden'); return; }
-
-        const btn = document.getElementById('saveBtn');
+        const statusDiv = document.getElementById('saveStatus');
+        const btn = document.getElementById('calcBtn');
         const originalText = btn.innerHTML;
-        const email = document.getElementById('userEmail').value;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังส่ง...';
+        
+        if(!url) { 
+            statusDiv.innerText = "⚠ ยังไม่ได้เชื่อมต่อ Google Sheet"; 
+            statusDiv.className = "text-center text-xs mt-2 text-red-500 font-bold";
+            return; 
+        }
+
+        statusDiv.innerText = "กำลังบันทึกข้อมูล...";
+        statusDiv.className = "text-center text-xs mt-2 text-blue-500 animate-pulse";
         btn.disabled = true;
 
-        // Gather Level Info text
         let levelInfo = "";
         const rows = document.querySelectorAll('.level-row');
         rows.forEach(r => {
@@ -792,16 +781,13 @@ function doPost(e) {
             weight: document.getElementById('weight').value,
             height: document.getElementById('height').value,
             scr: document.getElementById('scr').value,
-            
             loadingDose: document.querySelector('input[name="loadingOption"]:checked').value === 'yes' ? document.getElementById('loadingDose').value : "No",
             mdDose: document.getElementById('mdDose').value,
             interval: document.getElementById('interval').value,
             t_inf: document.getElementById('infusionTime').value,
             doseCount: document.getElementById('doseCount').value,
             firstMDTime: document.getElementById('firstMDTime').value || "-",
-            
             levelInfo: levelInfo,
-
             crcl: document.getElementById('resCrCl').innerText,
             vd: document.getElementById('resVd').innerText,
             ke: document.getElementById('resKe').innerText,
@@ -810,19 +796,21 @@ function doPost(e) {
             peak: document.getElementById('resTruePeak').innerText,
             trough: document.getElementById('resTrueTrough').innerText,
             rec: document.getElementById('recommendationText').innerText,
-            
-            email: email 
+            email: document.getElementById('userEmail').value 
         };
 
         try {
             await fetch(url, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-            document.getElementById('saveStatus').innerText = "บันทึกและส่ง PDF เรียบร้อย!";
-            document.getElementById('saveStatus').className = "text-green-600 text-xs text-center mt-2 font-bold";
+            statusDiv.innerText = "✔ บันทึกข้อมูลและส่งผลสำเร็จ";
+            statusDiv.className = "text-center text-xs mt-2 text-green-600 font-bold";
         } catch(e) { 
             console.error(e);
-            alert("Error sending data"); 
+            statusDiv.innerText = "❌ เกิดข้อผิดพลาดในการบันทึก";
+            statusDiv.className = "text-center text-xs mt-2 text-red-600 font-bold";
         } 
-        finally { setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000); }
+        finally { 
+            setTimeout(() => { btn.disabled = false; }, 1000); 
+        }
     }
 </script>
 
