@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vancomycin Calculator & Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts: Sarabun -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; }
+        .card { transition: all 0.3s ease; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .input-field { 
+            width: 100%; 
+            padding: 0.5rem; 
+            border: 1px solid #d1d5db; 
+            border-radius: 0.5rem; 
+            outline: none; 
+            transition: border-color 0.2s;
+        }
+        .input-field:focus { border-color: #3b82f6; ring: 2px; }
+        .section-header {
+            background-color: #f9fafb;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            color: #1f2937;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            border-left: 4px solid #3b82f6;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+            transition: all 0.2s;
+        }
+        .btn-primary:hover { transform: scale(1.02); }
+        .btn-secondary {
+            background-color: #e5e7eb;
+            color: #374151;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover { background-color: #d1d5db; }
+        .level-row {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md z-10 sticky top-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <!-- Changed Icon to Thick SVG Red Cross -->
+                    <svg class="w-10 h-10 text-red-600 mr-3" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 9H15V4C15 3.45 14.55 3 14 3H10C9.45 3 9 3.45 9 4V9H4C3.45 9 3 9.45 3 10V14C3 14.55 3.45 15 4 15H9V20C9 20.55 9.45 21 10 21H14C14.55 21 15 20.55 15 20V15H20C20.55 15 21 14.55 21 14V10C21 9.45 20.55 9 20 9Z"/>
+                    </svg>
+                    <span class="font-bold text-xl text-gray-800">VancoCalc <span class="text-sm font-normal text-gray-500">QSMH</span></span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="document.getElementById('setupModal').classList.remove('hidden')" class="text-gray-600 hover:text-blue-600 text-sm">
+                        <i class="fa-solid fa-gear mr-1"></i> ตั้งค่าระบบ/เชื่อมต่อ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+            
+            <!-- Left Column: Input Form (Width 5/12) -->
+            <div class="xl:col-span-5 space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-lg card">
+                    <form id="calcForm" class="space-y-6">
+                        
+                        <!-- PART 1: Patient Data -->
+                        <div>
+                            <div class="section-header border-l-blue-500 bg-blue-50">
+                                <span class="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center mr-2 text-sm">1</span>
+                                ข้อมูลผู้ป่วย (Patient Data)
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-xs text-gray-500 font-bold">AN</label>
+                                    <input type="text" id="an" class="input-field" placeholder="ระบุ AN">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500 font-bold">เพศ (Gender)</label>
+                                    <select id="gender" class="input-field">
+                                        <option value="male">ชาย (Male)</option>
+                                        <option value="female">หญิง (Female)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500 font-bold">อายุ (ปี)</label>
+                                    <input type="number" id="age" class="input-field" placeholder="65" required>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500 font-bold">น้ำหนัก (kg)</label>
+                                    <input type="number" id="weight" class="input-field" placeholder="70" required>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500 font-bold">ส่วนสูง (cm)</label>
+                                    <input type="number" id="height" class="input-field" placeholder="170" required>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500 font-bold">Serum Creatinine</label>
+                                    <input type="number" step="0.01" id="scr" class="input-field" placeholder="1.2" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PART 2: Dosing Regimen -->
+                        <div>
+                            <div class="section-header border-l-purple-500 bg-purple-50">
+                                <span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center mr-2 text-sm">2</span>
+                                ข้อมูลการใช้ยา (Dosing Regimen)
+                            </div>
+                            
+                            <!-- Loading Dose Toggle -->
+                            <div class="mb-4">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Loading Dose?</label>
+                                <div class="flex space-x-4 mb-2">
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="loadingOption" value="no" checked onchange="toggleLoading(false)" class="form-radio text-purple-600">
+                                        <span class="ml-2 text-sm">No</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="loadingOption" value="yes" onchange="toggleLoading(true)" class="form-radio text-purple-600">
+                                        <span class="ml-2 text-sm">Yes</span>
+                                    </label>
+                                </div>
+                                <div id="loadingInputSection" class="hidden pl-4 border-l-2 border-purple-200">
+                                    <label class="text-xs text-gray-500 font-bold">ขนาด Loading Dose (mg)</label>
+                                    <input type="number" id="loadingDose" class="input-field mt-1" placeholder="เช่น 1500">
+                                    <p class="text-[10px] text-green-600 mt-1"><i class="fa-solid fa-check-circle"></i> นำมาคำนวณเพื่อให้ถึง Steady State เร็วขึ้น</p>
+                                </div>
+                            </div>
+
+                            <!-- Maintenance Dose -->
+                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-3">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-xs text-gray-500 font-bold">Maintenance Dose (mg)</label>
+                                        <input type="number" id="mdDose" class="input-field" placeholder="1000">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 font-bold">Interval (hrs)</label>
+                                        <input type="number" id="interval" class="input-field" placeholder="12">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-xs text-gray-500 font-bold">Infusion Time (hrs)</label>
+                                        <input type="number" id="infusionTime" class="input-field" value="1.0" step="0.5">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 font-bold">จำนวน Dose ที่ให้ไปแล้ว</label>
+                                        <input type="number" id="doseCount" class="input-field" value="1">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500 font-bold">วัน/เวลา ที่เริ่มให้ MD มื้อแรก</label>
+                                    <input type="datetime-local" id="firstMDTime" class="input-field bg-white">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PART 3: Serum Level Data -->
+                        <div>
+                            <div class="section-header border-l-orange-500 bg-orange-50">
+                                <span class="bg-orange-500 text-white rounded-full w-6 h-6 flex items-center justify-center mr-2 text-sm">3</span>
+                                ข้อมูลระดับยาในเลือด (Serum Level)
+                            </div>
+                            
+                            <div class="mb-2">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">มีผลระดับยาหรือไม่?</label>
+                                <div class="flex space-x-4">
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="levelOption" value="no" checked onchange="toggleLevelSection(false)" class="form-radio text-orange-600">
+                                        <span class="ml-2 text-sm">No</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="levelOption" value="yes" onchange="toggleLevelSection(true)" class="form-radio text-orange-600">
+                                        <span class="ml-2 text-sm">Yes</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div id="levelListSection" class="hidden mt-3 space-y-2">
+                                <div id="levelContainer" class="space-y-2">
+                                    <!-- Dynamic rows will be added here -->
+                                </div>
+                                <button type="button" onclick="addLevelRow()" class="btn-secondary w-full text-xs py-2 border border-dashed border-gray-400">
+                                    <i class="fa-solid fa-plus mr-1"></i> เพิ่มค่าระดับยา (Add Level)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 flex gap-3">
+                            <button type="button" onclick="calculate()" class="btn-primary w-full shadow-lg transform active:scale-95">
+                                <i class="fa-solid fa-calculator mr-2"></i>วิเคราะห์ผล (Calculate)
+                            </button>
+                            <button type="button" onclick="resetForm()" class="px-4 py-2 bg-gray-200 rounded-lg text-gray-600 hover:bg-gray-300">
+                                <i class="fa-solid fa-rotate-right"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Column: Results (Width 7/12) -->
+            <div class="xl:col-span-7 space-y-6">
+                
+                <!-- Results Card -->
+                <div id="resultSection" class="bg-white p-6 rounded-xl shadow-lg card hidden opacity-0 transition-all duration-500">
+                    <div class="flex justify-between items-start mb-6 border-b pb-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">ผลการวิเคราะห์</h2>
+                            <p class="text-sm text-gray-500" id="patientSummary"></p>
+                        </div>
+                        <div class="text-right">
+                             <span id="calcMethodBadge" class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                                Population PK
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Graph Section -->
+                    <div class="mb-6 p-2 bg-white rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="text-sm font-bold text-gray-700 mb-2 ml-2"><i class="fa-solid fa-chart-area mr-2 text-blue-500"></i>กราฟระดับยาในเลือด (Concentration-Time Profile)</h3>
+                        <div class="relative h-64 w-full">
+                            <canvas id="pkChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Left: PK Parameters -->
+                        <div class="space-y-4">
+                            <h3 class="font-bold text-gray-700 border-l-4 border-blue-500 pl-2">พารามิเตอร์ (Parameters)</h3>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div class="bg-gray-50 p-2 rounded">
+                                    <div class="text-gray-500 text-xs">CrCl (Est.)</div>
+                                    <div class="font-bold text-blue-600 text-lg" id="resCrCl">-</div>
+                                </div>
+                                <div class="bg-gray-50 p-2 rounded">
+                                    <div class="text-gray-500 text-xs">Vd</div>
+                                    <div class="font-bold text-gray-800 text-lg" id="resVd">-</div>
+                                </div>
+                                <div class="bg-gray-50 p-2 rounded">
+                                    <div class="text-gray-500 text-xs">Ke (Pop/Adj)</div>
+                                    <div class="font-bold text-gray-800" id="resKe">-</div>
+                                </div>
+                                <div class="bg-gray-50 p-2 rounded">
+                                    <div class="text-gray-500 text-xs">Half-Life</div>
+                                    <div class="font-bold text-gray-800" id="resHalfLife">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: True Levels & AUC -->
+                        <div class="space-y-4">
+                            <h3 class="font-bold text-gray-700 border-l-4 border-green-500 pl-2">ระดับยาจริง (True Levels)</h3>
+                            
+                            <div class="bg-green-50 p-4 rounded-lg border border-green-100">
+                                <div class="flex justify-between items-end mb-2">
+                                    <span class="text-sm text-gray-600">AUC (0-24hr)</span>
+                                    <span class="text-2xl font-bold text-green-700" id="resAUC">-</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-300">
+                                    <div id="aucBar" class="bg-green-600 h-2.5 rounded-full" style="width: 0%"></div>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1 text-right">Target: 400 - 600</p>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="result-card text-center">
+                                    <div class="text-xs text-gray-500">True Peak</div>
+                                    <div class="font-bold text-xl text-purple-600" id="resTruePeak">-</div>
+                                    <div class="text-[10px] text-gray-400">Target: 20-40</div>
+                                </div>
+                                <div class="result-card text-center">
+                                    <div class="text-xs text-gray-500">True Trough</div>
+                                    <div class="font-bold text-xl text-red-600" id="resTrueTrough">-</div>
+                                    <div class="text-[10px] text-gray-400">Target: 10-20</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recommendation Box -->
+                    <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                        <h4 class="font-bold text-yellow-800 mb-2"><i class="fa-solid fa-lightbulb mr-2"></i>สรุปและคำแนะนำ</h4>
+                        <p id="recommendationText" class="text-sm text-gray-800 leading-relaxed"></p>
+                    </div>
+
+                    <!-- Save & Email Action -->
+                    <div class="mt-6 border-t pt-4 bg-gray-50 p-4 rounded-lg">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">อีเมลสำหรับรับผล (Email)</label>
+                        <div class="flex gap-2 mb-2">
+                            <div class="relative w-full">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-envelope text-gray-400"></i>
+                                </div>
+                                <input type="email" id="userEmail" class="input-field pl-10" placeholder="example@hospital.com">
+                            </div>
+                        </div>
+                        
+                         <button onclick="saveAndSendEmail()" id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex justify-center items-center">
+                            <i class="fa-solid fa-paper-plane mr-2"></i> บันทึกและส่งเมล
+                        </button>
+                        <p id="saveStatus" class="text-center text-xs mt-2 text-gray-500"></p>
+                    </div>
+                </div>
+
+                <!-- Guide -->
+                <div class="bg-white p-6 rounded-xl shadow-sm">
+                    <h3 class="font-bold text-gray-700 mb-3 text-sm">สูตรการคำนวณ (Methodology)</h3>
+                    <div class="text-xs text-gray-500 space-y-2">
+                        <p>1. <strong>CrCl:</strong> Cockcroft-Gault Equation.</p>
+                        <p>2. <strong>Graphing:</strong> ใช้หลักการ Superposition ของ Dose ยาจริงตามที่กรอก</p>
+                        <p>3. <strong>Adjustment:</strong> หากมีผลเลือดหลายค่า จะใช้ค่าล่าสุดในการปรับ Clearance (Linear Adjustment) เพื่อให้ผลลัพธ์เป็นปัจจุบันที่สุด</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer with Disclaimer -->
+    <footer class="bg-gray-100 border-t border-gray-200 mt-auto">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <div class="inline-block p-4 rounded-lg bg-red-50 border border-red-100 max-w-3xl">
+                    <p class="text-xs text-gray-600 leading-relaxed">
+                        <span class="font-bold text-red-600 block mb-2 text-sm">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> ข้อควรระวัง (Disclaimer)
+                        </span>
+                        โปรแกรมนี้จัดทำขึ้นเพื่อเป็นเครื่องมือช่วยคำนวณและสนับสนุนการตัดสินใจทางคลินิก (Clinical Decision Support) เท่านั้น 
+                        ผลลัพธ์ที่ได้อ้างอิงจากสมการทางเภสัชจลนศาสตร์และข้อมูลประชากร (Population PK) 
+                        <br class="hidden sm:block">
+                        <strong>แพทย์และเภสัชกรผู้ใช้งานต้องใช้วิจารณญาณทางคลินิก (Clinical Judgment) ตรวจสอบความถูกต้อง 
+                        และพิจารณาร่วมกับสภาวะจริงของผู้ป่วยก่อนการสั่งใช้ยาทุกครั้ง</strong> 
+                        ทางผู้จัดทำไม่รับผิดชอบต่อความคลาดเคลื่อนหรือผลกระทบใดๆ ที่อาจเกิดขึ้นจากการนำผลการคำนวณไปใช้
+                    </p>
+                </div>
+                <p class="text-[10px] text-gray-400 mt-4">
+                    © 2024 VancoCalc QSMH. All rights reserved.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal for Setup -->
+    <div id="setupModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white w-11/12 md:w-3/4 lg:w-1/2 rounded-xl shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[90vh]">
+            <div class="bg-gray-50 px-6 py-4 border-b flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-gray-800">วิธีตั้งค่าระบบบันทึกและส่งเมล</h3>
+                <button onclick="document.getElementById('setupModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                 <p class="text-sm text-gray-600 mb-4">เพื่อให้ส่งเมลจาก <strong>edu.somdej@gmail.com</strong> ได้ คุณต้อง Login บัญชีนั้นแล้วทำตามขั้นตอนนี้:</p>
+                 <ol class="list-decimal text-sm text-gray-600 space-y-2 pl-4 mb-4">
+                    <li>สร้าง Google Sheet แล้วไปที่ <strong>Extensions > Apps Script</strong></li>
+                    <li>ลบโค้ดเก่าทิ้งทั้งหมด แล้ววางโค้ดใหม่ด้านล่างนี้ลงไป</li>
+                    <li>กด <strong>Deploy > New deployment</strong> เลือก type เป็น "Web app"</li>
+                    <li><strong>สำคัญมาก:</strong> ตรง "Execute as" ต้องเป็น "Me (edu.somdej...)"</li>
+                    <li><strong>สำคัญมาก:</strong> ตรง "Who has access" เลือก "Anyone"</li>
+                    <li>Copy URL ที่ได้มาใส่ในช่องด้านล่าง</li>
+                 </ol>
+                 
+                 <div class="relative mb-4">
+                     <textarea class="w-full h-48 bg-gray-800 text-green-400 p-3 text-xs rounded font-mono" readonly>
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
+  
+  // 1. Save to Sheet (Using new input structure)
+  sheet.appendRow([new Date(), data.an, data.age, data.auc, data.peak, data.trough, data.rec, data.email]);
+  
+  // 2. Send Email (if provided)
+  if (data.email) {
+    var subject = "ผลการวิเคราะห์ระดับยา Vancomycin (AN: " + data.an + ")";
+    
+    var body = "<div style='font-family: sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px; max-width: 600px;'>" +
+               "<h2 style='color: #2563eb;'>ผลการวิเคราะห์ Vancomycin</h2>" +
+               "<p><strong>AN:</strong> " + data.an + "</p>" +
+               "<p><strong>AUC (0-24hr):</strong> <span style='font-size: 1.2em; font-weight: bold;'>" + data.auc + "</span> (Target: 400-600)</p>" +
+               "<p><strong>True Peak:</strong> " + data.peak + " mcg/mL</p>" +
+               "<p><strong>True Trough:</strong> " + data.trough + " mcg/mL</p>" +
+               "<div style='background-color: #fef9c3; padding: 10px; border-radius: 5px; margin-top: 10px;'>" +
+               "<strong>คำแนะนำ:</strong> " + data.rec + "</div>" +
+               "<hr style='margin-top: 20px; border: 0; border-top: 1px solid #eee;'>" +
+               "<p style='font-size: 0.8em; color: #666;'>ส่งจากระบบ VancoCalc Pro (โดย edu.somdej@gmail.com)</p>" +
+               "</div>";
+               
+    MailApp.sendEmail({
+      to: data.email,
+      subject: subject,
+      htmlBody: body
+    });
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({"status":"success"})).setMimeType(ContentService.MimeType.JSON);
+}
+                     </textarea>
+                     <div class="absolute top-2 right-2 text-xs text-gray-500 bg-white px-2 py-1 rounded opacity-70">Google Apps Script Code</div>
+                 </div>
+
+                 <label class="block text-sm font-bold text-gray-700 mb-1">Web App URL</label>
+                 <input type="text" id="scriptUrl" class="input-field mb-4" placeholder="https://script.google.com/macros/s/...">
+                 <button id="saveConfigBtn" class="btn-primary w-full">บันทึก URL</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- UI Logic ---
+    function toggleLoading(show) {
+        document.getElementById('loadingInputSection').classList.toggle('hidden', !show);
+    }
+
+    function toggleLevelSection(show) {
+        const sec = document.getElementById('levelListSection');
+        sec.classList.toggle('hidden', !show);
+        if(show && document.getElementById('levelContainer').children.length === 0) {
+            addLevelRow(); // Add first row automatically
+        }
+    }
+
+    function addLevelRow() {
+        const container = document.getElementById('levelContainer');
+        const index = container.children.length + 1;
+        const row = document.createElement('div');
+        row.className = "level-row bg-gray-50 p-2 rounded border border-gray-200 grid grid-cols-2 gap-2 relative";
+        row.innerHTML = `
+            <div>
+                <label class="text-[10px] text-gray-500 font-bold">วัน/เวลา เจาะเลือด</label>
+                <input type="datetime-local" class="input-field text-sm level-time bg-white">
+            </div>
+            <div>
+                <label class="text-[10px] text-gray-500 font-bold">ระดับยา (mcg/mL)</label>
+                <input type="number" step="0.1" class="input-field text-sm level-conc bg-white" placeholder="Value">
+            </div>
+            ${index > 1 ? '<button type="button" onclick="this.parentElement.remove()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"><i class="fa-solid fa-times"></i></button>' : ''}
+        `;
+        container.appendChild(row);
+    }
+
+    // --- Calculation Logic ---
+    let myChart = null; 
+
+    function calculate() {
+        // 1. Get Patient Data
+        const age = parseFloat(document.getElementById('age').value);
+        const gender = document.getElementById('gender').value;
+        const weight = parseFloat(document.getElementById('weight').value);
+        const scr = parseFloat(document.getElementById('scr').value);
+
+        if(!age || !weight || !scr) { alert("กรุณากรอกข้อมูลผู้ป่วยให้ครบ"); return; }
+
+        // 2. Dosing Data
+        const hasLoading = document.querySelector('input[name="loadingOption"]:checked').value === 'yes';
+        const loadingDose = hasLoading ? parseFloat(document.getElementById('loadingDose').value || 0) : 0;
+        const mdDose = parseFloat(document.getElementById('mdDose').value || 0);
+        const interval = parseFloat(document.getElementById('interval').value || 0);
+        const t_inf = parseFloat(document.getElementById('infusionTime').value || 1);
+        const doseCount = parseInt(document.getElementById('doseCount').value || 1);
+        const firstMDTimeStr = document.getElementById('firstMDTime').value;
+
+        if(!mdDose || !interval) { alert("กรุณากรอกข้อมูล Maintenance Dose"); return; }
+
+        // 3. Level Data
+        const hasLevel = document.querySelector('input[name="levelOption"]:checked').value === 'yes';
+        let measuredLevels = [];
+        if(hasLevel) {
+            const rows = document.querySelectorAll('.level-row');
+            rows.forEach(r => {
+                const t = r.querySelector('.level-time').value;
+                const c = parseFloat(r.querySelector('.level-conc').value);
+                if(t && !isNaN(c)) measuredLevels.push({ time: new Date(t), conc: c });
+            });
+            // Sort by time
+            measuredLevels.sort((a, b) => a.time - b.time);
+        }
+
+        // --- Core PK ---
+        let crcl = ((140 - age) * weight) / (72 * scr);
+        if (gender === 'female') crcl *= 0.85;
+        
+        let ke_pop = (0.00083 * crcl) + 0.0044;
+        let vd_pop = 0.7 * weight; 
+        
+        // --- Adjustment Logic (Simplified to use Last Level) ---
+        let final_ke = ke_pop;
+        let final_vd = vd_pop;
+        let final_cl = final_ke * final_vd;
+        let method = "Population PK";
+
+        // Logic: If levels exist, use the LATEST one to adjust Clearance (Cl)
+        // Assumption: Vd is population, Cl varies.
+        if (measuredLevels.length > 0 && firstMDTimeStr) {
+            const lastLevel = measuredLevels[measuredLevels.length - 1];
+            const startTime = new Date(firstMDTimeStr);
+            
+            // Calculate predicted conc at this time using Superposition of previous doses
+            const predConc = simulateConcentration(startTime, lastLevel.time, loadingDose, mdDose, interval, t_inf, ke_pop, vd_pop);
+            
+            if (predConc > 0) {
+                const ratio = predConc / lastLevel.conc;
+                final_cl = final_cl / ratio; 
+                final_ke = final_cl / final_vd;
+                method = "Adjusted (Based on Last Level)";
+            }
+        }
+
+        // --- Outputs ---
+        const dailyDose = mdDose * (24 / interval);
+        const auc24 = dailyDose / final_cl;
+
+        // Steady State Peak/Trough (Formula)
+        const ss_num = (mdDose / t_inf) * (1 - Math.exp(-final_ke * t_inf));
+        const ss_den = final_vd * final_ke * (1 - Math.exp(-final_ke * interval));
+        const true_peak = ss_num / ss_den;
+        const true_trough = true_peak * Math.exp(-final_ke * (interval - t_inf));
+
+        // Display
+        document.getElementById('patientSummary').innerText = `เพศ: ${gender}, อายุ: ${age}, CrCl: ${crcl.toFixed(1)}`;
+        document.getElementById('calcMethodBadge').innerText = method;
+        document.getElementById('calcMethodBadge').className = method.includes("Adjusted") ? "inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800" : "inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800";
+        
+        document.getElementById('resCrCl').innerText = crcl.toFixed(1);
+        document.getElementById('resVd').innerText = final_vd.toFixed(1) + " L";
+        document.getElementById('resKe').innerText = final_ke.toFixed(4) + "/hr";
+        document.getElementById('resHalfLife').innerText = (0.693/final_ke).toFixed(1) + " hr";
+
+        document.getElementById('resAUC').innerText = auc24.toFixed(0);
+        document.getElementById('resTruePeak').innerText = true_peak.toFixed(1);
+        document.getElementById('resTrueTrough').innerText = true_trough.toFixed(1);
+
+        // Styling AUC Bar
+        const aucElem = document.getElementById('aucBar');
+        let aucPercent = (auc24 / 800) * 100;
+        if(aucPercent > 100) aucPercent = 100;
+        aucElem.style.width = aucPercent + "%";
+        if(auc24 < 400) aucElem.className = "h-2.5 rounded-full bg-yellow-400";
+        else if(auc24 > 600) aucElem.className = "h-2.5 rounded-full bg-red-500";
+        else aucElem.className = "h-2.5 rounded-full bg-green-500";
+
+        // Recommendation
+        let rec = "";
+        if (auc24 < 400) rec += "AUC ต่ำ (<400). ";
+        else if (auc24 > 600) rec += "AUC สูง (>600). ";
+        else rec += "AUC ปกติ (400-600). ";
+        if(true_trough > 20) rec += "ระวัง Trough > 20.";
+        document.getElementById('recommendationText').innerText = rec;
+
+        // Chart
+        renderChart(loadingDose, mdDose, interval, t_inf, final_ke, final_vd, measuredLevels, firstMDTimeStr);
+
+        // Show Result
+        const resSec = document.getElementById('resultSection');
+        resSec.classList.remove('hidden');
+        setTimeout(() => resSec.classList.remove('opacity-0'), 50);
+    }
+
+    // --- Superposition Logic ---
+    function simulateConcentration(startTime, targetTime, ld, md, interval, t_inf, ke, vd) {
+        // Calculate doses administered before targetTime
+        let totalConc = 0;
+        const diffHours = (targetTime - startTime) / (1000 * 3600);
+        if (diffHours < 0) return 0;
+
+        // LD component
+        if (ld > 0) {
+            totalConc += calcSingleDoseConc(ld, diffHours, t_inf, ke, vd);
+        }
+
+        // MD components
+        // How many MDs have passed?
+        // First MD starts at T=0 (same as LD usually, or implies first maintenance)
+        // Let's assume MD starts at T=0 (concurrent with LD? No, usually LD, then MD later)
+        // Simplification: Assume MD1 starts at T=Interval after LD if LD given? 
+        // User Input "First MD Time" clears this up. We simulate from First MD Time.
+        // If LD is separate, we assume LD was given at First MD Time - Interval? 
+        // Let's stick to the First MD Time input for MDs. LD is added at T=0 (relative to First MD) for simplicity if checked.
+        
+        let t = 0; // Time of dose relative to start
+        let doseCount = 0;
+        // Limit simulation to past doses + some future
+        while (t < diffHours) {
+            // MD administered at time t
+            totalConc += calcSingleDoseConc(md, diffHours - t, t_inf, ke, vd);
+            t += interval;
+            doseCount++;
+            if(doseCount > 50) break; // Safety break
+        }
+        return totalConc;
+    }
+
+    function calcSingleDoseConc(dose, timeSinceDose, t_inf, ke, vd) {
+        if (timeSinceDose < 0) return 0;
+        if (timeSinceDose <= t_inf) {
+            // During infusion
+            return (dose / (t_inf * vd * ke)) * (1 - Math.exp(-ke * timeSinceDose));
+        } else {
+            // Elimination
+            const peak = (dose / (t_inf * vd * ke)) * (1 - Math.exp(-ke * t_inf));
+            return peak * Math.exp(-ke * (timeSinceDose - t_inf));
+        }
+    }
+
+    // --- Charting ---
+    function renderChart(ld, md, interval, t_inf, ke, vd, levels, startStr) {
+        const ctx = document.getElementById('pkChart').getContext('2d');
+        const dataPoints = [];
+        
+        // Simulating for 48 hours or enough to show steady state
+        // If startStr provided, try to align graph? For simplicity, graph starts at 0 (First MD)
+        // If LD provided, dose 0 is LD.
+        
+        const simHours = 72;
+        const step = 0.5;
+
+        for (let t = 0; t <= simHours; t += step) {
+            let conc = 0;
+            // LD effect (at t=0)
+            if (ld > 0) conc += calcSingleDoseConc(ld, t, t_inf, ke, vd);
+            
+            // MD effect (at t=0, t=interval, etc. OR if LD given, MD usually starts later?)
+            // Protocol: LD at 0. MD1 at calculated interval? 
+            // Let's assume MD1 starts at t=0 too (or user specifies). 
+            // Standard: LD at 0. MD1 at 12h (if q12).
+            // Logic: If LD>0, MD starts at t=Interval? Or t=0? 
+            // "Loading Dose" usually replaces the first dose.
+            // Let's assume: If LD, Dose 0 is LD. MD starts at t=Interval.
+            // If No LD, Dose 0 is MD.
+            
+            let mdStartTime = (ld > 0) ? interval : 0;
+            
+            // Loop MDs
+            for (let mdT = mdStartTime; mdT <= t; mdT += interval) {
+                conc += calcSingleDoseConc(md, t - mdT, t_inf, ke, vd);
+            }
+            
+            dataPoints.push({x: t, y: conc});
+        }
+
+        const datasets = [{
+            label: 'Predicted Conc.',
+            data: dataPoints,
+            borderColor: 'rgb(59, 130, 246)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.4
+        }];
+        
+        // Add Measured Levels points if relative time can be calculated
+        if (levels.length > 0 && startStr) {
+            const start = new Date(startStr);
+            const levelPoints = levels.map(l => {
+                const diffH = (l.time - start) / (3600000);
+                // Adjust diff based on assumption that Graph T=0 is Start Time
+                // If LD was given, and we assumed MD started at Interval, we need to shift?
+                // Visualisation: Let's assume StartTime = First MD Time.
+                return { x: diffH, y: l.conc };
+            }).filter(p => p.x >= 0 && p.x <= simHours);
+
+            if(levelPoints.length > 0) {
+                datasets.push({
+                    label: 'Measured Levels',
+                    data: levelPoints,
+                    backgroundColor: 'red',
+                    borderColor: 'red',
+                    pointRadius: 6,
+                    type: 'scatter',
+                    showLine: false
+                });
+            }
+        }
+
+        if (myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'linear', title: {display:true, text: 'Hours from Start'}, max: simHours },
+                    y: { beginAtZero: true, title: {display:true, text: 'Conc (mcg/mL)'} }
+                }
+            }
+        });
+    }
+
+    // --- Google Sheet ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedUrl = localStorage.getItem('googleScriptUrl');
+        if(savedUrl) document.getElementById('scriptUrl').value = savedUrl;
+
+        document.getElementById('saveConfigBtn').addEventListener('click', () => {
+            const url = document.getElementById('scriptUrl').value;
+            if(url) {
+                localStorage.setItem('googleScriptUrl', url);
+                alert('บันทึก URL เรียบร้อยแล้ว!');
+                document.getElementById('setupModal').classList.add('hidden');
+            }
+        });
+    });
+
+    async function saveAndSendEmail() {
+        const url = localStorage.getItem('googleScriptUrl');
+        if(!url) { alert("กรุณาตั้งค่า Web App URL ก่อน"); document.getElementById('setupModal').classList.remove('hidden'); return; }
+
+        const btn = document.getElementById('saveBtn');
+        const originalText = btn.innerHTML;
+        const email = document.getElementById('userEmail').value;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังส่ง...';
+        btn.disabled = true;
+
+        const data = {
+            an: document.getElementById('an').value || "-",
+            age: document.getElementById('age').value,
+            auc: document.getElementById('resAUC').innerText,
+            peak: document.getElementById('resTruePeak').innerText,
+            trough: document.getElementById('resTrueTrough').innerText,
+            rec: document.getElementById('recommendationText').innerText,
+            email: email 
+        };
+
+        try {
+            await fetch(url, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            document.getElementById('saveStatus').innerText = "บันทึกและส่งเมลเรียบร้อย!";
+            document.getElementById('saveStatus').className = "text-green-600 text-xs text-center mt-2 font-bold";
+        } catch(e) { alert("Error sending data"); } 
+        finally { setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000); }
+    }
+</script>
+
+</body>
+</html>
