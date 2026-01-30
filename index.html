@@ -73,7 +73,6 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <!-- Changed Icon to Thick SVG Red Cross -->
                     <svg class="w-10 h-10 text-red-600 mr-3" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path d="M20 9H15V4C15 3.45 14.55 3 14 3H10C9.45 3 9 3.45 9 4V9H4C3.45 9 3 9.45 3 10V14C3 14.55 3.45 15 4 15H9V20C9 20.55 9.45 21 10 21H14C14.55 21 15 20.55 15 20V15H20C20.55 15 21 14.55 21 14V10C21 9.45 20.55 9 20 9Z"/>
                     </svg>
@@ -331,9 +330,12 @@
                         </div>
                         
                          <button onclick="saveAndSendEmail()" id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex justify-center items-center">
-                            <i class="fa-solid fa-paper-plane mr-2"></i> บันทึกและส่งเมล
+                            <i class="fa-solid fa-file-pdf mr-2"></i> บันทึกและส่ง PDF ทางเมล
                         </button>
-                        <p id="saveStatus" class="text-center text-xs mt-2 text-gray-500"></p>
+                        <div class="text-center mt-2">
+                            <span id="userIdDisplay" class="text-[10px] text-gray-400 bg-gray-100 px-2 py-1 rounded">Machine ID: Loading...</span>
+                            <p id="saveStatus" class="text-center text-xs mt-1 text-gray-500"></p>
+                        </div>
                     </div>
                 </div>
 
@@ -382,7 +384,7 @@
                 <button onclick="document.getElementById('setupModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times"></i></button>
             </div>
             <div class="p-6 overflow-y-auto">
-                 <p class="text-sm text-gray-600 mb-4">เพื่อให้ส่งเมลจาก <strong>edu.somdej@gmail.com</strong> ได้ คุณต้อง Login บัญชีนั้นแล้วทำตามขั้นตอนนี้:</p>
+                 <p class="text-sm text-gray-600 mb-4">เพื่อให้ส่งเมลจาก <strong>edu.somdej@gmail.com</strong> พร้อม PDF ได้ คุณต้อง Login บัญชีนั้นแล้วทำตามขั้นตอนนี้:</p>
                  <ol class="list-decimal text-sm text-gray-600 space-y-2 pl-4 mb-4">
                     <li>สร้าง Google Sheet แล้วไปที่ <strong>Extensions > Apps Script</strong></li>
                     <li>ลบโค้ดเก่าทิ้งทั้งหมด แล้ววางโค้ดใหม่ด้านล่างนี้ลงไป</li>
@@ -397,30 +399,79 @@
 function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data = JSON.parse(e.postData.contents);
+  var timestamp = new Date();
   
-  // 1. Save to Sheet (Using new input structure)
-  sheet.appendRow([new Date(), data.an, data.age, data.auc, data.peak, data.trough, data.rec, data.email]);
+  // 1. บันทึกข้อมูลลง Sheet (ทุกคอลัมน์)
+  sheet.appendRow([
+    timestamp, data.userId, data.an, data.gender, data.age, data.weight, data.height, data.scr,
+    data.crcl, data.loadingDose, data.mdDose, data.interval, data.t_inf, data.doseCount, data.firstMDTime,
+    data.levelInfo, // สรุปข้อมูลระดับยาเป็น text
+    data.ke, data.vd, data.halflife, data.auc, data.peak, data.trough, data.rec, data.email
+  ]);
   
-  // 2. Send Email (if provided)
+  // 2. ส่งอีเมลพร้อมแนบ PDF
   if (data.email) {
-    var subject = "ผลการวิเคราะห์ระดับยา Vancomycin (AN: " + data.an + ")";
+    var subject = "รายงานผลการวิเคราะห์ Vancomycin (AN: " + data.an + ")";
     
-    var body = "<div style='font-family: sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px; max-width: 600px;'>" +
-               "<h2 style='color: #2563eb;'>ผลการวิเคราะห์ Vancomycin</h2>" +
-               "<p><strong>AN:</strong> " + data.an + "</p>" +
-               "<p><strong>AUC (0-24hr):</strong> <span style='font-size: 1.2em; font-weight: bold;'>" + data.auc + "</span> (Target: 400-600)</p>" +
-               "<p><strong>True Peak:</strong> " + data.peak + " mcg/mL</p>" +
-               "<p><strong>True Trough:</strong> " + data.trough + " mcg/mL</p>" +
-               "<div style='background-color: #fef9c3; padding: 10px; border-radius: 5px; margin-top: 10px;'>" +
-               "<strong>คำแนะนำ:</strong> " + data.rec + "</div>" +
-               "<hr style='margin-top: 20px; border: 0; border-top: 1px solid #eee;'>" +
-               "<p style='font-size: 0.8em; color: #666;'>ส่งจากระบบ VancoCalc Pro (โดย edu.somdej@gmail.com)</p>" +
-               "</div>";
-               
+    // สร้างเนื้อหา HTML สำหรับแปลงเป็น PDF
+    var htmlContent = `
+      <div style="font-family: 'Sarabun', sans-serif; padding: 20px;">
+        <h2 style="color: #1a56db; text-align: center;">VancoCalc QSMH Report</h2>
+        <hr>
+        <p><strong>วันที่/เวลา:</strong> ${timestamp.toLocaleString()}</p>
+        <p><strong>User ID (Machine):</strong> ${data.userId}</p>
+        
+        <h3 style="background-color: #eff6ff; padding: 5px;">1. ข้อมูลผู้ป่วย</h3>
+        <table style="width:100%; border-collapse: collapse;">
+          <tr><td><strong>AN:</strong> ${data.an}</td><td><strong>เพศ:</strong> ${data.gender}</td></tr>
+          <tr><td><strong>อายุ:</strong> ${data.age} ปี</td><td><strong>น้ำหนัก:</strong> ${data.weight} kg</td></tr>
+          <tr><td><strong>ส่วนสูง:</strong> ${data.height} cm</td><td><strong>SCr:</strong> ${data.scr} mg/dL</td></tr>
+          <tr><td colspan="2"><strong>CrCl (Est):</strong> ${data.crcl} ml/min</td></tr>
+        </table>
+
+        <h3 style="background-color: #f5f3ff; padding: 5px;">2. ข้อมูลการใช้ยา</h3>
+        <ul>
+          <li><strong>Loading Dose:</strong> ${data.loadingDose} mg</li>
+          <li><strong>Maintenance Dose:</strong> ${data.mdDose} mg every ${data.interval} hrs</li>
+          <li><strong>Infusion Time:</strong> ${data.t_inf} hrs</li>
+          <li><strong>เริ่มให้ยา:</strong> ${data.firstMDTime}</li>
+        </ul>
+
+        <h3 style="background-color: #fff7ed; padding: 5px;">3. ระดับยาในเลือด</h3>
+        <p>${data.levelInfo || "ไม่มีข้อมูลระดับยา"}</p>
+
+        <h3 style="background-color: #f0fdf4; padding: 5px;">4. ผลการวิเคราะห์และพารามิเตอร์</h3>
+        <table style="width:100%; border: 1px solid #ddd;" border="1">
+          <tr style="background-color: #ddd;"><th>Parameter</th><th>Value</th></tr>
+          <tr><td>AUC (0-24hr)</td><td><strong>${data.auc}</strong> (Target 400-600)</td></tr>
+          <tr><td>True Peak</td><td>${data.peak} mcg/mL</td></tr>
+          <tr><td>True Trough</td><td>${data.trough} mcg/mL</td></tr>
+          <tr><td>Vd</td><td>${data.vd} L</td></tr>
+          <tr><td>Ke</td><td>${data.ke} /hr</td></tr>
+          <tr><td>Half-Life</td><td>${data.halflife} hr</td></tr>
+        </table>
+
+        <div style="margin-top: 20px; padding: 15px; background-color: #fef9c3; border: 1px solid #eab308; border-radius: 5px;">
+          <strong>คำแนะนำ (Recommendation):</strong><br>
+          ${data.rec}
+        </div>
+        
+        <p style="font-size: 0.8em; color: gray; text-align: center; margin-top: 50px;">
+          เอกสารนี้สร้างโดยระบบอัตโนมัติ VancoCalc QSMH เพื่อประกอบการตัดสินใจทางคลินิกเท่านั้น
+        </p>
+      </div>
+    `;
+
+    // แปลง HTML เป็น PDF Blob
+    var pdfBlob = Utilities.newBlob(htmlContent, 'text/html', 'VancoReport_' + data.an + '.html').getAs('application/pdf');
+    pdfBlob.setName("VancoReport_" + data.an + ".pdf");
+
+    // ส่งเมล
     MailApp.sendEmail({
       to: data.email,
       subject: subject,
-      htmlBody: body
+      body: "เรียนผู้ใช้งาน,\n\nแนบไฟล์ PDF รายงานผลการวิเคราะห์ระดับยา Vancomycin ของผู้ป่วย AN: " + data.an + " ครับ\n\nด้วยความเคารพ,\nVancoCalc QSMH Team",
+      attachments: [pdfBlob]
     });
   }
   
@@ -440,6 +491,33 @@ function doPost(e) {
 </div>
 
 <script>
+    // --- User ID Logic ---
+    function getUserId() {
+        let userId = localStorage.getItem('vanco_userid');
+        if (!userId) {
+            // Generate simple UUID-like string
+            userId = 'user_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('vanco_userid', userId);
+        }
+        return userId;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('userIdDisplay').innerText = "Machine ID: " + getUserId();
+        // ... (Google script setup)
+        const savedUrl = localStorage.getItem('googleScriptUrl');
+        if(savedUrl) document.getElementById('scriptUrl').value = savedUrl;
+
+        document.getElementById('saveConfigBtn').addEventListener('click', () => {
+            const url = document.getElementById('scriptUrl').value;
+            if(url) {
+                localStorage.setItem('googleScriptUrl', url);
+                alert('บันทึก URL เรียบร้อยแล้ว!');
+                document.getElementById('setupModal').classList.add('hidden');
+            }
+        });
+    });
+
     // --- UI Logic ---
     function toggleLoading(show) {
         document.getElementById('loadingInputSection').classList.toggle('hidden', !show);
@@ -602,19 +680,9 @@ function doPost(e) {
         }
 
         // MD components
-        // How many MDs have passed?
-        // First MD starts at T=0 (same as LD usually, or implies first maintenance)
-        // Let's assume MD starts at T=0 (concurrent with LD? No, usually LD, then MD later)
-        // Simplification: Assume MD1 starts at T=Interval after LD if LD given? 
-        // User Input "First MD Time" clears this up. We simulate from First MD Time.
-        // If LD is separate, we assume LD was given at First MD Time - Interval? 
-        // Let's stick to the First MD Time input for MDs. LD is added at T=0 (relative to First MD) for simplicity if checked.
-        
         let t = 0; // Time of dose relative to start
         let doseCount = 0;
-        // Limit simulation to past doses + some future
         while (t < diffHours) {
-            // MD administered at time t
             totalConc += calcSingleDoseConc(md, diffHours - t, t_inf, ke, vd);
             t += interval;
             doseCount++;
@@ -639,35 +707,16 @@ function doPost(e) {
     function renderChart(ld, md, interval, t_inf, ke, vd, levels, startStr) {
         const ctx = document.getElementById('pkChart').getContext('2d');
         const dataPoints = [];
-        
-        // Simulating for 48 hours or enough to show steady state
-        // If startStr provided, try to align graph? For simplicity, graph starts at 0 (First MD)
-        // If LD provided, dose 0 is LD.
-        
         const simHours = 72;
         const step = 0.5;
 
         for (let t = 0; t <= simHours; t += step) {
             let conc = 0;
-            // LD effect (at t=0)
             if (ld > 0) conc += calcSingleDoseConc(ld, t, t_inf, ke, vd);
-            
-            // MD effect (at t=0, t=interval, etc. OR if LD given, MD usually starts later?)
-            // Protocol: LD at 0. MD1 at calculated interval? 
-            // Let's assume MD1 starts at t=0 too (or user specifies). 
-            // Standard: LD at 0. MD1 at 12h (if q12).
-            // Logic: If LD>0, MD starts at t=Interval? Or t=0? 
-            // "Loading Dose" usually replaces the first dose.
-            // Let's assume: If LD, Dose 0 is LD. MD starts at t=Interval.
-            // If No LD, Dose 0 is MD.
-            
             let mdStartTime = (ld > 0) ? interval : 0;
-            
-            // Loop MDs
             for (let mdT = mdStartTime; mdT <= t; mdT += interval) {
                 conc += calcSingleDoseConc(md, t - mdT, t_inf, ke, vd);
             }
-            
             dataPoints.push({x: t, y: conc});
         }
 
@@ -681,14 +730,10 @@ function doPost(e) {
             tension: 0.4
         }];
         
-        // Add Measured Levels points if relative time can be calculated
         if (levels.length > 0 && startStr) {
             const start = new Date(startStr);
             const levelPoints = levels.map(l => {
                 const diffH = (l.time - start) / (3600000);
-                // Adjust diff based on assumption that Graph T=0 is Start Time
-                // If LD was given, and we assumed MD started at Interval, we need to shift?
-                // Visualisation: Let's assume StartTime = First MD Time.
                 return { x: diffH, y: l.conc };
             }).filter(p => p.x >= 0 && p.x <= simHours);
 
@@ -720,21 +765,6 @@ function doPost(e) {
         });
     }
 
-    // --- Google Sheet ---
-    document.addEventListener('DOMContentLoaded', () => {
-        const savedUrl = localStorage.getItem('googleScriptUrl');
-        if(savedUrl) document.getElementById('scriptUrl').value = savedUrl;
-
-        document.getElementById('saveConfigBtn').addEventListener('click', () => {
-            const url = document.getElementById('scriptUrl').value;
-            if(url) {
-                localStorage.setItem('googleScriptUrl', url);
-                alert('บันทึก URL เรียบร้อยแล้ว!');
-                document.getElementById('setupModal').classList.add('hidden');
-            }
-        });
-    });
-
     async function saveAndSendEmail() {
         const url = localStorage.getItem('googleScriptUrl');
         if(!url) { alert("กรุณาตั้งค่า Web App URL ก่อน"); document.getElementById('setupModal').classList.remove('hidden'); return; }
@@ -745,21 +775,53 @@ function doPost(e) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังส่ง...';
         btn.disabled = true;
 
+        // Gather Level Info text
+        let levelInfo = "";
+        const rows = document.querySelectorAll('.level-row');
+        rows.forEach(r => {
+            const t = r.querySelector('.level-time').value;
+            const c = r.querySelector('.level-conc').value;
+            if(t) levelInfo += `[${t}: ${c} mcg/mL] `;
+        });
+
         const data = {
+            userId: getUserId(),
             an: document.getElementById('an').value || "-",
+            gender: document.getElementById('gender').value,
             age: document.getElementById('age').value,
+            weight: document.getElementById('weight').value,
+            height: document.getElementById('height').value,
+            scr: document.getElementById('scr').value,
+            
+            loadingDose: document.querySelector('input[name="loadingOption"]:checked').value === 'yes' ? document.getElementById('loadingDose').value : "No",
+            mdDose: document.getElementById('mdDose').value,
+            interval: document.getElementById('interval').value,
+            t_inf: document.getElementById('infusionTime').value,
+            doseCount: document.getElementById('doseCount').value,
+            firstMDTime: document.getElementById('firstMDTime').value || "-",
+            
+            levelInfo: levelInfo,
+
+            crcl: document.getElementById('resCrCl').innerText,
+            vd: document.getElementById('resVd').innerText,
+            ke: document.getElementById('resKe').innerText,
+            halflife: document.getElementById('resHalfLife').innerText,
             auc: document.getElementById('resAUC').innerText,
             peak: document.getElementById('resTruePeak').innerText,
             trough: document.getElementById('resTrueTrough').innerText,
             rec: document.getElementById('recommendationText').innerText,
+            
             email: email 
         };
 
         try {
             await fetch(url, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-            document.getElementById('saveStatus').innerText = "บันทึกและส่งเมลเรียบร้อย!";
+            document.getElementById('saveStatus').innerText = "บันทึกและส่ง PDF เรียบร้อย!";
             document.getElementById('saveStatus').className = "text-green-600 text-xs text-center mt-2 font-bold";
-        } catch(e) { alert("Error sending data"); } 
+        } catch(e) { 
+            console.error(e);
+            alert("Error sending data"); 
+        } 
         finally { setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000); }
     }
 </script>
